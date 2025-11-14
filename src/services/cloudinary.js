@@ -142,7 +142,8 @@ const uploadFromBase64 = async (dataUri, publicId, metadata, requestId) => {
     const pdfBuffer = Buffer.from(base64Data, 'base64');
 
     const uploadOptions = {
-      resource_type: 'raw',
+      resource_type: 'image',
+      format: 'pdf',
       public_id: finalPublicId,
       folder: 'intercom/pdfs',
       use_filename: true,
