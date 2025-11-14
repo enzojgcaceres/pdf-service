@@ -1,4 +1,5 @@
 const cloudinary = require('cloudinary').v2;
+const { format } = require('path');
 const logger = require('../utils/logger');
 
 // Configurar Cloudinary
@@ -14,6 +15,12 @@ const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB
 const UPLOAD_TIMEOUT = 300000; // 5 minutos
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const ensurePdfExtension = (id) => {
+  if (!id) return id;
+  return id.toLowerCase().endsWith('.pdf') ? id : `${id}.pdf`;
+};
+
 
 const uploadWithRetry = async (uploadFunction, options, retries = MAX_RETRIES) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -39,18 +46,39 @@ const uploadWithRetry = async (uploadFunction, options, retries = MAX_RETRIES) =
   }
 };
 
-const uploadFromUrl = async (fileUrl, publicId, metadata, requestId) => {
+// const uploadFromUrl = async (fileUrl, publicId, metadata, requestId) => {
+  // const uploadOptions = {
+  //   resource_type: 'raw',
+  //   type: 'upload',
+  //   public_id: publicId,
+  //   folder: 'intercom/pdfs',
+  //   use_filename: true,
+  //   unique_filename: !publicId,
+  //   overwrite: true,
+  //   timeout: UPLOAD_TIMEOUT,
+  //   context: metadata ? Object.entries(metadata).map(([key, value]) => `${key}=${value}`).join('|') : undefined
+  // };
+
+  const uploadFromUrl = async (fileUrl, publicId, metadata, requestId) => {
+  const finalPublicId = ensurePdfExtension(publicId);
+
   const uploadOptions = {
-    resource_type: 'raw',
+    resource_type: 'image',
+    format: 'pdf',
     type: 'upload',
-    public_id: publicId,
+    public_id: finalPublicId,
     folder: 'intercom/pdfs',
     use_filename: true,
-    unique_filename: !publicId,
+    unique_filename: !finalPublicId,
     overwrite: true,
     timeout: UPLOAD_TIMEOUT,
-    context: metadata ? Object.entries(metadata).map(([key, value]) => `${key}=${value}`).join('|') : undefined
+    context: metadata
+      ? Object.entries(metadata)
+          .map(([key, value]) => `${key}=${value}`)
+          .join('|')
+      : undefined
   };
+  
 
   logger.info('Starting URL upload to Cloudinary', {
     requestId,
@@ -68,33 +96,66 @@ const uploadFromUrl = async (fileUrl, publicId, metadata, requestId) => {
   return result;
 };
 
+// const uploadFromBase64 = async (dataUri, publicId, metadata, requestId) => {
+//   try {
+//     // Limpiar el base64 si viene con prefijo data URL
+//     const base64Data = dataUri.startsWith('data:application/pdf') 
+//       ? dataUri.split(',')[1] 
+//       : dataUri.replace(/^data:application\/pdf;base64,/, '');
+    
+//     logger.info('Starting base64 upload to Cloudinary', {
+//       requestId,
+//       dataLength: base64Data.length,
+//       publicId,
+//       originalDataUriLength: dataUri.length
+//     });
+
+//     // Convertir base64 a Buffer
+//     const pdfBuffer = Buffer.from(base64Data, 'base64');
+
+//     const uploadOptions = {
+//       resource_type: 'raw',
+//       public_id: publicId,
+//       folder: 'intercom/pdfs',
+//       use_filename: true,
+//       unique_filename: !publicId,
+//       overwrite: true,
+//       timeout: UPLOAD_TIMEOUT,
+//       context: metadata ? Object.entries(metadata).map(([key, value]) => `${key}=${value}`).join('|') : undefined
+//     };
+
 const uploadFromBase64 = async (dataUri, publicId, metadata, requestId) => {
   try {
-    // Limpiar el base64 si viene con prefijo data URL
-    const base64Data = dataUri.startsWith('data:application/pdf') 
-      ? dataUri.split(',')[1] 
+    const base64Data = dataUri.startsWith('data:application/pdf')
+      ? dataUri.split(',')[1]
       : dataUri.replace(/^data:application\/pdf;base64,/, '');
-    
+
+    const finalPublicId = ensurePdfExtension(publicId);
+
     logger.info('Starting base64 upload to Cloudinary', {
       requestId,
       dataLength: base64Data.length,
-      publicId,
+      publicId: finalPublicId,
       originalDataUriLength: dataUri.length
     });
 
-    // Convertir base64 a Buffer
     const pdfBuffer = Buffer.from(base64Data, 'base64');
 
     const uploadOptions = {
       resource_type: 'raw',
-      public_id: publicId,
+      public_id: finalPublicId,
       folder: 'intercom/pdfs',
       use_filename: true,
-      unique_filename: !publicId,
+      unique_filename: !finalPublicId,
       overwrite: true,
       timeout: UPLOAD_TIMEOUT,
-      context: metadata ? Object.entries(metadata).map(([key, value]) => `${key}=${value}`).join('|') : undefined
+      context: metadata
+        ? Object.entries(metadata)
+            .map(([key, value]) => `${key}=${value}`)
+            .join('|')
+        : undefined
     };
+
 
     // Usar upload_stream para subir el Buffer directamente
     const result = await new Promise((resolve, reject) => {
@@ -135,37 +196,6 @@ const uploadFromBase64 = async (dataUri, publicId, metadata, requestId) => {
     throw error;
   }
 };
-
-  // const uploadFromBase64 = async (dataUri, publicId, metadata, requestId) => {
-  //   const base64Data = dataUri.replace(/^data:application\/pdf;base64,/, '');
-    
-  //   logger.info('Starting base64 upload to Cloudinary', {
-  //     requestId,
-  //     dataLength: base64Data.length,
-  //     publicId,
-  //     chunkSize: `${CHUNK_SIZE / 1024 / 1024}MB`
-  //   });
-
-  //   const uploadOptions = {
-  //     resource_type: 'raw',
-  //     public_id: publicId,
-  //     folder: 'intercom/pdfs',
-  //     use_filename: true,
-  //     unique_filename: !publicId,
-  //     overwrite: true,
-  //     chunk_size: CHUNK_SIZE,
-  //     timeout: UPLOAD_TIMEOUT,
-  //     context: metadata ? Object.entries(metadata).map(([key, value]) => `${key}=${value}`).join('|') : undefined
-  //   };
-
-  //   const result = await uploadWithRetry(
-  //     (opts) => cloudinary.uploader.upload_large(dataUri, opts),
-  //     uploadOptions,
-  //     MAX_RETRIES
-  //   );
-
-  //   return result;
-  // };
 
 module.exports = {
   uploadFromUrl,

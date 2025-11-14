@@ -1,0 +1,35 @@
+async function subirPdfACloudinary(pdfBuffer) {
+  return new Promise((resolve, reject) => {
+    if (!Buffer.isBuffer(pdfBuffer)) {
+      reject(new Error(“El objeto pdfBuffer no es un Buffer válido.“));
+    }
+    cloudinary.uploader
+      .upload_stream(
+        {
+          resource_type: “auto”, // Detecta automáticamente el tipo de archivo
+          format: “pdf”, // Fuerza el formato PDF en la URL
+        },
+        (error, result) => {
+          if (error) {
+            console.error(“Error al subir el PDF a Cloudinary:“, error);
+            reject(error);
+          } else {
+            resolve(result.secure_url); // La URL del archivo PDF
+          }
+        }
+      )
+      .end(pdfBuffer);
+  });
+}
+
+
+
+
+
+
+
+
+
+
+
+
