@@ -249,6 +249,7 @@ const uploadFromBase64 = async (dataUri, publicId, metadata, requestId) => {
             .join("|")
         : undefined,
     };
+    
     if (source === 'base64') {
   logger.info('DEBUG incoming base64', {
     requestId,
