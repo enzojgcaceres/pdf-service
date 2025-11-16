@@ -226,6 +226,8 @@ const uploadFromUrl = async (fileUrl, publicId, metadata, requestId) => {
 //   }
 // };
 
+
+
 const uploadFromBase64 = async (dataUri, publicId, metadata, requestId) => {
   try {
     const base64Data = dataUri.startsWith("data:")
@@ -247,6 +249,14 @@ const uploadFromBase64 = async (dataUri, publicId, metadata, requestId) => {
             .join("|")
         : undefined,
     };
+    if (source === 'base64') {
+  logger.info('DEBUG incoming base64', {
+    requestId,
+    rawLength: file_data_uri?.length,
+    startsWith: file_data_uri?.slice(0, 50),
+    endsWith: file_data_uri?.slice(-50),
+  });
+}
 
     const result = await cloudinary.uploader.upload(base64Data, uploadOptions);
     return result;
