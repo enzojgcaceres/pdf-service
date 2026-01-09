@@ -381,7 +381,8 @@ async function getPresupuestoPdfBase64({
   const promo1 = normalizeOptionalPromo(promocion);
   const promo2 = normalizeOptionalPromo(promocion_2);
   const promo3 = normalizeOptionalPromo(promocion_3);
-  const descuento = normalizeOptionalPromo(descuento);
+  
+  const descuentoNormalizado = normalizeOptionalPromo(descuento);
 
   const url = `${LQM_BASE_URL}/presupuesto`;
 
@@ -402,7 +403,7 @@ async function getPresupuestoPdfBase64({
   if (promo1) body.promocion = promo1;
   if (promo2) body.promocion_2 = promo2;
   if (promo3) body.promocion_3 = promo3;
-  if (descuento) body.descuento = descuento;
+  if (descuentoNormalizado) body.descuento = descuentoNormalizado;
 
   logger.info('LQM: calling /presupuesto', {
     requestId,
