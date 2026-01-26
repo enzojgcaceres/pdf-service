@@ -350,6 +350,7 @@ router.post('/lqm/presupuesto', authenticate, async (req, res) => {
     cliente,
     telefono,
     mail,
+    descuento,
     // Cloudinary
     public_id,
     metadata,
@@ -399,6 +400,7 @@ router.post('/lqm/presupuesto', authenticate, async (req, res) => {
       cliente,
       telefono,
       mail,
+      descuento,
       requestId: req.id,
     });
 

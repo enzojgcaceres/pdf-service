@@ -336,31 +336,20 @@ async function getAccessToken(companyId = LQM_COMPANY_ID, requestId) {
   return fetchNewAccessToken(companyId, requestId);
 }
 
+// function normalizeOptionalPromo(value) {
+//   if (value === undefined || value === null) return undefined;
+//   if (typeof value === 'string' && value.trim() === '') return undefined;
+//   return value;
+// }
+
 function normalizeOptionalPromo(value) {
-  if (value === undefined || value === null) return undefined;
-  if (typeof value === 'string' && value.trim() === '') return undefined;
-  return value;
+  if (value === undefined || value === null) return "";
+  const trimmed = String(value).trim();
+  // Si es vacío o es el guion que manda Intercom, devolvemos string vacío
+  if (trimmed === '' || trimmed === '-') return "";
+  return trimmed;
 }
 
-/**
- * Llama a /presupuesto y devuelve el PDF en base64 (campo "presupuesto").
- *
- * Request esperado (nuevo contrato LQM + promos 2 y 3):
- * {
- *   "access_token": "<TOKEN>",
- *   "id": "corral",
- *   "articulo": "ALV-2055516",
- *   "cantidad": 4,
- *   "sucursal": "9999 Capacitacion",
- *   "promocion": "Efectivo",
- *   "promocion_2": "3 Cuotas",
- *   "promocion_3": "6 Cuotas",
- *   "servicios_recomendados": true,
- *   "cliente": "Juan Perez",
- *   "telefono": "1112345678",
- *   "mail": "mail@mail.com"
- * }
- */
 async function getPresupuestoPdfBase64({
   articulo,
   cantidad,
@@ -375,6 +364,14 @@ async function getPresupuestoPdfBase64({
   requestId,
   descuento, //
 }) {
+
+
+  // --- LOG 1: Ver qué recibe la función desde el controller ---
+  console.log(`[LQM DEBUG - ${requestId}] Parámetros recibidos en service:`, { 
+    articulo, sucursal, promocion, descuento 
+  });
+
+
   const companyId = LQM_COMPANY_ID; // siempre "corral"
   const accessToken = await getAccessToken(companyId, requestId);
 
@@ -383,6 +380,12 @@ async function getPresupuestoPdfBase64({
   const promo3 = normalizeOptionalPromo(promocion_3);
   
   const descuentoNormalizado = normalizeOptionalPromo(descuento);
+
+  // --- LOG 2: Ver el resultado de la normalización ---
+  console.log(`[LQM DEBUG - ${requestId}] Valores normalizados:`, { 
+    promo1, promo2, promo3, descuentoNormalizado 
+  });
+
 
   const url = `${LQM_BASE_URL}/presupuesto`;
 
@@ -404,6 +407,9 @@ async function getPresupuestoPdfBase64({
   if (promo2) body.promocion_2 = promo2;
   if (promo3) body.promocion_3 = promo3;
   if (descuentoNormalizado) body.descuento = descuentoNormalizado;
+
+   // --- LOG 3: El objeto final que sale hacia LQM ---
+  console.log(`[LQM DEBUG - ${requestId}] JSON final enviado a LQM:`, JSON.stringify(body));
 
   logger.info('LQM: calling /presupuesto', {
     requestId,
@@ -459,29 +465,6 @@ async function getPresupuestoPdfBase64({
   }
 }
 
-/**
- * Llama a /presupuesto y devuelve el PDF en base64 (campo "presupuesto").
- *
- * Request esperado (nuevo contrato LQM):
- * {
- *   "access_token": "<TOKEN>",
- *   "id": "corral",
- *   "articulo": "ALV-2055516",
- *   "cantidad": 4,
- *   "sucursal": "9999 Capacitacion",
- *   "promocion": "Efectivo",
- *   "servicios_recomendados": true,
- *   "cliente": "Juan Perez",
- *   "telefono": "1112345678",
- *   "mail": "mail@mail.com"
- * }
- *
- * Respuesta:
- * {
- *   "status": "ok",
- *   "presupuesto": "<BASE64_PDF>"
- * }
- */
 // async function getPresupuestoPdfBase64({
 //   articulo,
 //   cantidad,
